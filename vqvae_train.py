@@ -18,7 +18,7 @@ initial_learning_rate   = 2e-4
 batch_size              = 8
 savePath                = 'vae_models'
 milestones              = [30, 100]
-save_interval           = 100
+save_interval           = 20
 # 创建一个保存重建图像的文件夹
 reconstructed_images_path = os.path.join(savePath, 'reconstructed_images')
 if not os.path.exists(reconstructed_images_path):
@@ -150,6 +150,7 @@ for epoch in range(num_epochs):
 
             # 前向传播
             recon_batch, quantized = model(images)
+            latents = model.encode(images)
 
             # 计算损失
             loss = vqvae_loss(recon_batch, images, quantized)
@@ -176,9 +177,12 @@ for epoch in range(num_epochs):
 
             epoch_psnr.append(psnr_value)
             epoch_ssim.append(ssim_value)
+            
+            stacked_images = torch.cat([original_img, reconstructed_img], dim=-2)
 
             # 保存重建图像
-            save_image(recon_batch, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
+            save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
+            save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
 
         test_loss /= len(test_loader.dataset)
         test_losses.append(test_loss)
