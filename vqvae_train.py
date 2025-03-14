@@ -117,7 +117,6 @@ for epoch in range(num_epochs):
     model.train()
     train_loss = 0
     for batch_idx, (images, _) in enumerate(train_loader):
-        break
         images = images.to(device)
         optimizer.zero_grad()
 
