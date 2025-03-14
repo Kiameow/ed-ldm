@@ -18,6 +18,7 @@ initial_learning_rate   = 2e-4
 batch_size              = 8
 savePath                = 'vae_models'
 milestones              = [30, 100]
+save_interval           = 100
 # 创建一个保存重建图像的文件夹
 reconstructed_images_path = os.path.join(savePath, 'reconstructed_images')
 if not os.path.exists(reconstructed_images_path):
@@ -199,6 +200,9 @@ for epoch in range(num_epochs):
     # 打印当前学习率
     current_lr = scheduler.get_last_lr()
     print(f'===> Epoch {epoch + 1} Current learning rate: {current_lr}')
+    if (epoch + 1) % save_interval == 0:
+        save_model_path = os.path.join(savePath, f"vae-{epoch}.pt")
+        torch.save(model.state_dict(), save_model_path)
 # 保存模型
 save_model_path = os.path.join(savePath, f"vae-{epoch}.pt")
 torch.save(model.state_dict(), save_model_path)
