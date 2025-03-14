@@ -2,3 +2,4 @@ dataset/*
 *models*/*
 text_embedder/*
 __pycache__
+*.zip

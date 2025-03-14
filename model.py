@@ -24,7 +24,7 @@ myVQVAE = VQVAE(
         (2, 4, 1, 1, 0)
     ),
     num_embeddings=256,
-    embedding_dim=4,
+    embedding_dim=2,
     output_act="tanh",
 )#[B, 4, H/16, W/16]
 # diffusion.py
