@@ -150,7 +150,7 @@ for epoch in range(num_epochs):
 
             # 前向传播
             recon_batch, quantized = model(images)
-            latents = model.encode(images)
+            latents = model.encode(images).to(torch.device('cpu')).numpy()
 
             # 计算损失
             loss = vqvae_loss(recon_batch, images, quantized)
