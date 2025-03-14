@@ -159,8 +159,6 @@ for epoch in range(num_epochs):
             # 计算 PSNR 和 SSIM
             reconstructed_img = recon_batch.squeeze().to(torch.device('cpu')).numpy()
             original_img = images.squeeze().to(torch.device('cpu')).numpy()
-            
-            stacked_images = torch.cat([images.squeeze(), recon_batch.squeeze()], dim=-2).to(torch.device('cpu')).numpy()
 
             # # 从 [-1, 1] 转换到 [0, 1]
             original_img = (original_img + 1) / 2
@@ -179,6 +177,11 @@ for epoch in range(num_epochs):
 
             epoch_psnr.append(psnr_value)
             epoch_ssim.append(ssim_value)
+            
+            if original_img.ndim == 3:  # 单通道情况
+                stacked_images = np.concatenate([original_img, reconstructed_img], axis=1)  # 沿高度方向拼接
+            elif original_img.ndim == 4:  # RGB 图像
+                stacked_images = np.concatenate([original_img, reconstructed_img], axis=1)  # (B, H, W, C)
 
             # 保存重建图像
             save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
