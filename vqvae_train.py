@@ -159,6 +159,7 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_loader):
             images, cond_images, labels = batch["image"], batch["cond_image"], batch["label"] 
+            images = torch.cat([images, cond_images], dim=0)
             images = images.to(device)
 
             # 前向传播
@@ -192,12 +193,16 @@ for epoch in range(num_epochs):
 
             epoch_psnr.append(psnr_value)
             epoch_ssim.append(ssim_value)
+            
+            B, C, H, W = images.size()
+            flair_img = images[:B//2]
+            flair_recon = recon_batch[:B//2]
 
             # 保存重建图像
             sample_dir = os.path.join(reconstructed_images_path, f"{batch_idx+1}")
             os.makedirs(sample_dir, exist_ok=True)
-            save_image(images, os.path.join(sample_dir, f"original.png"))
-            save_image(recon_batch, os.path.join(sample_dir, f"reconstruct.png"))
+            save_image(flair_img, os.path.join(sample_dir, f"original.png"))
+            save_image(flair_recon, os.path.join(sample_dir, f"reconstruct.png"))
             if batch_idx % (batch_idx // 25) == 0:
                 save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
                 save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
