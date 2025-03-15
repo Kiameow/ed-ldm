@@ -194,6 +194,8 @@ for epoch in range(num_epochs):
             epoch_psnr.append(psnr_value)
             epoch_ssim.append(ssim_value)
             
+            images = (images + 1) / 2
+            recon_batch = (recon_batch + 1) / 2
             B, C, H, W = images.size()
             flair_img = images[:B//2]
             flair_recon = recon_batch[:B//2]
