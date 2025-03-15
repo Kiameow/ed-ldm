@@ -129,7 +129,6 @@ for epoch in range(num_epochs):
     for batch_idx, batch in enumerate(train_loader):
         images, cond_images, labels = batch["image"], batch["cond_image"], batch["label"]
         images = torch.cat([images, cond_images], dim=0)
-        print(images.shape)
         images = images.to(device)
         optimizer.zero_grad()
 
