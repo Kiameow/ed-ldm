@@ -1,4 +1,6 @@
+from random import sample
 import matplotlib.pyplot as plt
+from dataset import load_dataset
 import numpy as np
 import torch
 from torch import nn, optim
@@ -15,7 +17,7 @@ train_dataset_path      = 'dataset/train'
 test_dataset_path       = 'dataset/test'
 num_epochs              = 500
 initial_learning_rate   = 2e-4
-batch_size              = 8
+batch_size              = 32
 savePath                = 'vae_models'
 milestones              = [30, 100]
 save_interval           = 20
@@ -35,12 +37,20 @@ transform = transforms.Compose([
 ])
 
 # 加载数据集
-train_dataset = datasets.ImageFolder(root=train_dataset_path, transform=transform)
-test_dataset  = datasets.ImageFolder(root=test_dataset_path,  transform=transform)
+train_dataset = load_dataset(
+    dataset_root=train_dataset_path, 
+    filter_option="healthy", 
+    transform=transform
+    )
+test_dataset  = load_dataset(
+    dataset_root=test_dataset_path, 
+    filter_option="diseased", 
+    transform=transform
+    )
 
 # 使用 DataLoader 加载数据
 train_loader  = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader   = DataLoader(test_dataset,  batch_size=batch_size, shuffle=False)
+test_loader   = DataLoader(test_dataset,  batch_size=1, shuffle=False)
 
 print(f"train data batch num = {len(train_loader)}")
 print(f"train test batch num = {len(test_loader)}")
@@ -116,7 +126,10 @@ ssim_values  = []
 for epoch in range(num_epochs):
     model.train()
     train_loss = 0
-    for batch_idx, (images, _) in enumerate(train_loader):
+    for batch_idx, batch in enumerate(train_loader):
+        images, cond_images, labels = batch["image"], batch["cond_image"], batch["label"]
+        images = torch.cat([images, cond_images], dim=0)
+        print(images.shape)
         images = images.to(device)
         optimizer.zero_grad()
 
@@ -131,7 +144,7 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         train_loss += loss.item()
-        if batch_idx % 100 == 0:
+        if (batch_idx + 1) % (len(train_loader) // 2) == 0:
             print(f'Epoch {epoch + 1}, Batch {batch_idx + 1}, Loss: {loss.item() / len(images)}')
 
     # 每个epoch打印一次平均训练损失
@@ -181,8 +194,13 @@ for epoch in range(num_epochs):
             epoch_ssim.append(ssim_value)
 
             # 保存重建图像
-            save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
-            save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
+            sample_dir = os.path.join(reconstructed_images_path, f"{batch_idx+1}")
+            os.makedirs(sample_dir, exist_ok=True)
+            save_image(images, os.path.join(sample_dir, f"original.png"))
+            save_image(recon_batch, os.path.join(sample_dir, f"reconstruct.png"))
+            if batch_idx % (batch_idx // 25) == 0:
+                save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
+                save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
 
         test_loss /= len(test_loader.dataset)
         test_losses.append(test_loss)

@@ -124,3 +124,84 @@ def get_dataloaders(config):
     )
 
     return train_loader, test_loader
+
+
+def load_dataset(dataset_root, filter_option="both", transform=None):
+    """
+    Load dataset images along with their conditional images and labels, with optional image transformation.
+
+    Parameters:
+        dataset_root (str): The root directory of the dataset.
+        filter_option (str): One of "healthy", "diseased", or "both".
+                             - "healthy": returns only images with the 'normal' label.
+                             - "diseased": returns only images with non-'normal' labels.
+                             - "both": returns all images.
+        transform (callable, optional): A function/transform to apply to the main image.
+
+    Returns:
+        list[dict]: A list of dictionaries, each containing:
+            - "image": the loaded (and transformed, if applicable) image from the images folder.
+            - "cond_image": the loaded condition image from the cond_images folder.
+            - "label": the classification string.
+    """
+    # Define paths to the training subdirectories and text file.
+    images_dir = os.path.join(dataset_root, "images")
+    cond_images_dir = os.path.join(dataset_root, "cond_images")
+    txt_file = os.path.join(dataset_root, "texts.txt")
+
+    dataset = []
+    
+    # Read the text file and parse classification info.
+    with open(txt_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            # Each line is expected to be in the format: filename,label
+            parts = line.split(",")
+            if len(parts) < 2:
+                continue
+            filename = parts[0].strip()
+            label = parts[1].strip()
+
+            # Apply filtering based on the provided option.
+            if filter_option == "healthy" and label.lower() != "normal":
+                continue
+            if filter_option == "diseased" and label.lower() == "normal":
+                continue
+
+            # Construct full paths to the images.
+            image_path = os.path.join(images_dir, filename)
+            cond_image_path = os.path.join(cond_images_dir, filename)
+            
+            # Check if both images exist.
+            if not os.path.exists(image_path) or not os.path.exists(cond_image_path):
+                print(f"Warning: Missing file for {filename}. Skipping.")
+                continue
+
+            # Open the images and convert them to Grayscale.
+            image = Image.open(image_path).convert("L")
+            cond_image = Image.open(cond_image_path).convert("L")
+            
+            # Apply the transformation to the main image if provided.
+            if transform is not None:
+                image = transform(image)
+                cond_image = transform(cond_image)
+            
+            # Append the loaded data to the dataset.
+            dataset.append({
+                "image": image,
+                "cond_image": cond_image,
+                "label": label
+            })
+    return dataset
+
+# Example usage:
+# from torchvision import transforms
+# transform = transforms.Compose([
+#     transforms.Resize((256, 256)),
+#     transforms.ToTensor()
+# ])
+# dataset = load_dataset("/path/to/dataset", filter_option="both", transform=transform)
+# for data in dataset:
+#     print(data["label"])
