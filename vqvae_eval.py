@@ -1,163 +1,127 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-from generative.networks.nets import VQVAE
-import metrics
 import os
+import numpy as np
 from PIL import Image
+import torch
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from torchvision.utils import save_image
+import metrics
+from model import myVQVAE
+from dataset import load_dataset
+import torch.nn.functional as F
 
-# 设置设备为CPU
-device = torch.device("cpu")
-
-# 数据预处理：将图片调整为灰度图，并将大小调整为 256x256
-transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
-    transforms.Resize((256, 256)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5])  # 标准化到 [-1, 1]
-])
-
-# 加载数据集
-dataset_path = 'D:/Desktop/epilepsy/Dataset/PNG_opmd/eval_test'  # 测试数据集路径
-test_dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
-test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-
-# 加载训练好的VQ-VAE模型，并指定将模型加载到CPU
-model = VQVAE(
-    spatial_dims=2,
-    in_channels=1,
-    out_channels=1,
-    num_channels=(128, 256),  # 确保与下采样层数匹配
-    num_res_channels=256,
-    num_res_layers=2,
-    downsample_parameters=(
-        (2, 4, 1, 1),  # 第一次下采样：256x256 → 64x64
-        (2, 4, 1, 1)   # 第二次下采样：64x64 → 16x16
-    ),
-    upsample_parameters=(
-        (2, 4, 1, 1, 0),  # 第一次上采样：16x16 → 64x64
-        (2, 4, 1, 1, 0)   # 第二次上采样：64x64 → 256x256
-    ),
-    num_embeddings=256,
-    embedding_dim=4,
-    output_act="tanh",
-)  # [B, 4, H/16, W/16]
-model.load_state_dict(torch.load('.\\premodel\\vqvae_model.pth', map_location=torch.device('cpu')))
-model.to(device)
-model.eval()
-
-# 创建保存图像的父文件夹
-save_path = 'D:/Desktop/epilepsy/Dataset/rcSave'
-original_save_path = os.path.join(save_path, 'original_images')
-reconstructed_save_path = os.path.join(save_path, 'reconstructed_images')
-codebook_save_path = os.path.join(save_path, 'codebook_images')  # 新增：保存特征编码图
-
-os.makedirs(original_save_path, exist_ok=True)
-os.makedirs(reconstructed_save_path, exist_ok=True)
-os.makedirs(codebook_save_path, exist_ok=True)
-
-# 定义保存特征编码图的函数
-# 定义保存特征编码图的函数
-def save_feature_map(feature_map, save_path, cmap='viridis'):
-    """
-    保存4通道特征编码图，将其归一化到 [0, 1] 范围
-    :param feature_map: 输入的特征编码图 (shape: [C, H, W])
-    :param save_path: 保存路径
-    :param cmap: 使用的颜色映射，默认为 'viridis'
-    """
-    # 转换到 numpy 数组
-    feature_map = feature_map.cpu().numpy()
-
-    # 动态归一化到 [0, 1]
-    feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min() + 1e-8)
-
-    # 转换为 (H, W, C) 格式
-    feature_map_rgb = np.transpose(feature_map, (1, 2, 0))
-
-    # 保存为伪彩色图
-    plt.imsave(save_path, feature_map_rgb, cmap=cmap)
-
-# 选择图像进行重建
-with torch.no_grad():
+def main():
+    # Define paths and parameters
+    test_dataset_path = 'dataset/test'
+    test_mask_dir = 'dataset/mask_test'  # adjust as needed for your directory structure
+    batch_size = 1  # process one sample at a time
+    checkpoint_path = 'vae_models/vae-final.pt'
+    
+    # Define test transform (same as in training, note the normalization)
+    test_transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5], [0.5])
+    ])
+    
+    # Load the test dataset using the updated load_dataset
+    test_dataset = load_dataset(
+        dataset_root=test_dataset_path,
+        mask_dir=test_mask_dir,
+        filter_option="both",   # load both healthy and diseased samples
+        transform=test_transform
+    )
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    
+    # Set up device and load the model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = myVQVAE.to(device)
+    
+    # Load the trained model checkpoint (update the path as needed)
+    if os.path.exists(checkpoint_path):
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        print(f"Loaded model checkpoint from {checkpoint_path}")
+    else:
+        print(f"Checkpoint {checkpoint_path} not found. Exiting.")
+        return
+    
+    model.eval()
+    
+    # Lists to accumulate metric values
     psnr_values = []
     ssim_values = []
-    for batch_idx, (data, _) in enumerate(test_loader):
-        data = data.to(device)
-        batch_size, C, H, W = data.shape
-        mid_point = H // 2
-        mask_upper = torch.zeros(batch_size, C, H, W, device=device)
-        mask_upper[:, :, :mid_point, :] = 1
-        mask_lower = torch.zeros(batch_size, C, H, W, device=device)
-        mask_lower[:, :, mid_point:, :] = 1
-        random_choices = torch.rand(batch_size, device=device) > 0.5
-        mask = mask_upper
-        mask[random_choices] = mask_lower[random_choices]
-        data = data * mask
-        data[mask == 0] = -1
-        # 前向传播
-        recon_batch, quantized_loss = model(data)
+    
+    # Create a folder to store evaluation results
+    output_folder = "vae_eval_results"
+    os.makedirs(output_folder, exist_ok=True)
+    
+    # Evaluation loop
+    with torch.no_grad():
+        for batch in test_loader:
+            # Each batch is a dictionary with keys: image, cond_image, label, mask, filename
+            images = batch["image"]          # shape: [1, C, H, W]
+            cond_images = batch["cond_image"]  # shape: [1, C, H, W]
+            label = batch["label"][0]          # e.g., "normal" or another string
+            filename = batch["filename"][0]    # original filename
+            mask = batch["mask"][0] if batch["mask"][0] is not None else None
+            
+            # Concatenate main image and conditional image along the batch dimension
+            input_tensor = torch.cat([images, cond_images], dim=0).to(device)  # shape: [2, C, H, W]
+            
+            # Get model outputs
+            recon_tensor, quantized = model(input_tensor)
+            latents = model.encode(input_tensor)
+            
+            # Use only the main image (first half of the concatenated tensor)
+            original = input_tensor[0:1]
+            reconstruction = recon_tensor[0:1]
+            latent_main = latents[0:1]
 
-        # 假设 quantized_loss 是特征编码图
-        featuremap_batch = model.encoder(data)
-        print(f"Feature map shape: {featuremap_batch.shape}")
-        print(f"Reconstructed batch shape: {recon_batch.shape}")
-        # 遍历批次中的每张图像
-        for img_idx in range(data.size(0)):
-            # 获取原图和重建图
-            original_img = data[img_idx].squeeze().cpu().numpy()
-            reconstructed_img = recon_batch[img_idx].squeeze().cpu().numpy()
-            featuremap = featuremap_batch[img_idx]
+            B, C, H, W = latent_main.size()
+            latent_main = latent_main.view(B*C, 1, H, W)
+            
+            # Rescale from [-1, 1] to [0, 1] before saving images
+            original_norm = (original + 1) / 2
+            reconstruction_norm = (reconstruction + 1) / 2
+            latent_norm = (latent_main + 1) / 2  # assuming latents are in [-1,1]
+            
+            # Compute the residual image (absolute difference)
+            residual = torch.abs(original_norm - reconstruction_norm)
+            residual = (residual - torch.min(residual)) / \
+                       (torch.max(residual) - torch.min(residual))
+            
+            # Compute PSNR and SSIM.
+            # Convert tensors to numpy arrays (squeeze removes batch and channel dims).
+            orig_np = (original_norm.squeeze().cpu().numpy() * 255).astype(np.uint8)
+            recon_np = (reconstruction_norm.squeeze().cpu().numpy() * 255).astype(np.uint8)
+            psnr_val = metrics.psnr(orig_np, recon_np)
+            ssim_val = metrics.compute_ssim(orig_np, recon_np)
+            psnr_values.append(psnr_val)
+            ssim_values.append(ssim_val)
+            
+            # Create a directory for this sample based on its filename (without extension)
+            filename_no_ext = os.path.splitext(filename)[0]
+            sample_dir = os.path.join(output_folder, filename_no_ext)
+            os.makedirs(sample_dir, exist_ok=True)
+            
+            # Save images (all data is in the range [0, 1])
+            save_image(original_norm, os.path.join(sample_dir, "original.png"))
+            save_image(reconstruction_norm, os.path.join(sample_dir, "reconstruct.png"))
+            save_image(residual, os.path.join(sample_dir, "residual.png"))
+            save_image(latent_norm, os.path.join(sample_dir, "latents.png"))
+            
+            # If the sample is diseased, save the mask as well
+            if label.lower() != "normal" and mask is not None:
+                save_image(mask, os.path.join(sample_dir, "mask.png"))
+            
+            print(f"Processed sample {filename} - PSNR: {psnr_val}, SSIM: {ssim_val}")
+    
+    # Compute and print average metrics over the test set
+    avg_psnr = np.mean(psnr_values)
+    avg_ssim = np.mean(ssim_values)
+    print(f"Average PSNR over test set: {avg_psnr}")
+    print(f"Average SSIM over test set: {avg_ssim}")
 
-            # 从 [-1, 1] 转换到 [0, 1]
-            original_img = (original_img + 1) / 2
-            reconstructed_img = (reconstructed_img + 1) / 2
-
-            # 转换为 uint8 格式 (0-255)
-            original_img_uint8 = (original_img * 255).astype(np.uint8)
-            reconstructed_img_uint8 = (reconstructed_img * 255).astype(np.uint8)
-
-            # 确保图像维度为 (H, W) 或 (H, W, 3)
-            if len(original_img_uint8.shape) == 2:  # 灰度图
-                original_img_pil = Image.fromarray(original_img_uint8, mode='L')
-                reconstructed_img_pil = Image.fromarray(reconstructed_img_uint8, mode='L')
-            else:  # RGB图
-                original_img_pil = Image.fromarray(original_img_uint8)
-                reconstructed_img_pil = Image.fromarray(reconstructed_img_uint8)
-
-            # 保存原始图像和重建图像
-            original_img_pil.save(os.path.join(
-                original_save_path,
-                f'original_batch{batch_idx}_img{img_idx}.png'
-            ))
-            reconstructed_img_pil.save(os.path.join(
-                reconstructed_save_path,
-                f'reconstructed_batch{batch_idx}_img{img_idx}.png'
-            ))
-
-            # 保存特征编码图
-            code_path = os.path.join(
-                codebook_save_path,
-                f'codebook_batch{batch_idx}_img{img_idx}.png'
-            )
-            save_feature_map(featuremap, code_path)
-            print(f"Feature map saved to: {code_path}")
-
-            # 计算指标（可选）
-            psnr_value = metrics.psnr(original_img_uint8, reconstructed_img_uint8)
-            ssim_value = metrics.compute_ssim(original_img_uint8, reconstructed_img_uint8)
-            psnr_values.append(psnr_value)
-            ssim_values.append(ssim_value)
-            print(f'Batch {batch_idx} Image {img_idx} - PSNR: {psnr_value:.4f}, SSIM: {ssim_value:.4f}')
-
-        # 如果只需要第一个批次，保留此break
-        if batch_idx == 1:
-            break
-
-    # 计算平均指标（可选）
-    if psnr_values:
-        avg_psnr = np.mean(psnr_values)
-        avg_ssim = np.mean(ssim_values)
-        print(f'Average PSNR: {avg_psnr:.4f}')
-        print(f'Average SSIM: {avg_ssim:.4f}')
+if __name__ == '__main__':
+    main()

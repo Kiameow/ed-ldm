@@ -1,6 +1,7 @@
 # data/dataset.py
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torchvision import datasets, transforms
 from PIL import Image
 import config
 import os
@@ -126,7 +127,7 @@ def get_dataloaders(config):
     return train_loader, test_loader
 
 
-def load_dataset(dataset_root, filter_option="both", transform=None):
+def load_dataset(dataset_root, mask_dir, filter_option="both", transform=None):
     """
     Load dataset images along with their conditional images and labels, with optional image transformation.
 
@@ -143,6 +144,7 @@ def load_dataset(dataset_root, filter_option="both", transform=None):
             - "image": the loaded (and transformed, if applicable) image from the images folder.
             - "cond_image": the loaded condition image from the cond_images folder.
             - "label": the classification string.
+            - "mask": the mask of the fcd(Only for diseased sample).
     """
     # Define paths to the training subdirectories and text file.
     images_dir = os.path.join(dataset_root, "images")
@@ -175,24 +177,42 @@ def load_dataset(dataset_root, filter_option="both", transform=None):
             cond_image_path = os.path.join(cond_images_dir, filename)
             
             # Check if both images exist.
-            if not os.path.exists(image_path) or not os.path.exists(cond_image_path):
+            if not os.path.exists(image_path) or \
+               not os.path.exists(cond_image_path):
                 print(f"Warning: Missing file for {filename}. Skipping.")
                 continue
 
             # Open the images and convert them to Grayscale.
             image = Image.open(image_path).convert("L")
             cond_image = Image.open(cond_image_path).convert("L")
+            mask = None
+            
+            if label.lower() != "normal":
+                mask_path = os.path.join(mask_dir, filename)
+                if not os.path.exists(mask_path):
+                    print(f"Warning: Missing file for {filename}. Skipping.")
+                    continue
+                mask = Image.open(mask_path).convert("L")
+                mask_transform = transforms.Compose([
+                    transforms.Grayscale(num_output_channels=1),
+                    transforms.Resize((256, 256)),
+                    transforms.ToTensor()
+                ])
+                
+                mask = mask_transform(mask)
             
             # Apply the transformation to the main image if provided.
             if transform is not None:
                 image = transform(image)
                 cond_image = transform(cond_image)
-            
+                
             # Append the loaded data to the dataset.
             dataset.append({
                 "image": image,
                 "cond_image": cond_image,
-                "label": label
+                "label": label,
+                "mask": mask,
+                "filename": filename
             })
     return dataset
 

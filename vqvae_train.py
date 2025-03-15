@@ -36,6 +36,13 @@ transform = transforms.Compose([
     transforms.Normalize([0.5], [0.5])
 ])
 
+test_transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize((256, 256)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5], [0.5])
+])
+
 # 加载数据集
 train_dataset = load_dataset(
     dataset_root=train_dataset_path, 
@@ -45,7 +52,7 @@ train_dataset = load_dataset(
 test_dataset  = load_dataset(
     dataset_root=test_dataset_path, 
     filter_option="diseased", 
-    transform=transform
+    transform=test_transform
     )
 
 # 使用 DataLoader 加载数据
