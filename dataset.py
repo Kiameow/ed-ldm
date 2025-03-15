@@ -185,7 +185,17 @@ def load_dataset(dataset_root, mask_dir, filter_option="both", transform=None):
             # Open the images and convert them to Grayscale.
             image = Image.open(image_path).convert("L")
             cond_image = Image.open(cond_image_path).convert("L")
-            mask = None
+            
+            
+            
+            # Apply the transformation to the main image if provided.
+            if transform is not None:
+                image = transform(image)
+                cond_image = transform(cond_image)
+            else:
+                raise RuntimeError("must specify transform")
+            
+            mask = torch.zeros_like(image)
             
             if label.lower() != "normal":
                 mask_path = os.path.join(mask_dir, filename)
@@ -200,11 +210,6 @@ def load_dataset(dataset_root, mask_dir, filter_option="both", transform=None):
                 ])
                 
                 mask = mask_transform(mask)
-            
-            # Apply the transformation to the main image if provided.
-            if transform is not None:
-                image = transform(image)
-                cond_image = transform(cond_image)
                 
             # Append the loaded data to the dataset.
             dataset.append({
