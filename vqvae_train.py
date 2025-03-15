@@ -15,6 +15,7 @@ from kornia.losses import SSIMLoss
 # 假设你的数据集存放在 'dataset_path' 路径下，每个类别在不同文件夹内
 train_dataset_path      = 'dataset/train'
 test_dataset_path       = 'dataset/test'
+mask_path               = 'dataset/mask_test'
 num_epochs              = 500
 initial_learning_rate   = 2e-4
 batch_size              = 16
@@ -46,11 +47,13 @@ test_transform = transforms.Compose([
 # 加载数据集
 train_dataset = load_dataset(
     dataset_root=train_dataset_path, 
+    mask_dir=mask_path,
     filter_option="healthy", 
     transform=transform
     )
 test_dataset  = load_dataset(
     dataset_root=test_dataset_path, 
+    mask_dir=mask_path
     filter_option="diseased", 
     transform=test_transform
     )
