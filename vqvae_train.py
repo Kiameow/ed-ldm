@@ -203,7 +203,7 @@ for epoch in range(num_epochs):
             os.makedirs(sample_dir, exist_ok=True)
             save_image(flair_img, os.path.join(sample_dir, f"original.png"))
             save_image(flair_recon, os.path.join(sample_dir, f"reconstruct.png"))
-            if (batch_idx+1) % (test_loader // 25 + 1) == 0:
+            if (batch_idx+1) % (len(test_loader) // 25 + 1) == 0:
                 save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
                 save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
 
