@@ -12,21 +12,24 @@ myVQVAE = VQVAE(
     spatial_dims=2,
     in_channels=1,
     out_channels=1,
-    num_channels=(128, 256),  # 确保与下采样层数匹配
-    num_res_channels=256,
+    num_channels=(128, 256, 512),  # Adding an extra channel for the third downsampling layer
+    num_res_channels=512,
     num_res_layers=2,
     downsample_parameters=(
-        (2, 4, 1, 1),  # 第一次下采样：256x256 → 128
-        (2, 4, 1, 1)
+        (2, 4, 1, 1),  # First downsampling: 256x256 → 128x128
+        (2, 4, 1, 1),  # Second downsampling: 128x128 → 64x64
+        (2, 4, 1, 1),  # Third downsampling: 64x64 → 32x32
     ),
     upsample_parameters=(
-        (2, 4, 1, 1, 0),  # 第一次上采样：64 → 64x64
-        (2, 4, 1, 1, 0)
+        (2, 4, 1, 1, 0),  # First upsampling: 32x32 → 64x64
+        (2, 4, 1, 1, 0),  # Second upsampling: 64x64 → 128x128
+        (2, 4, 1, 1, 0),  # Third upsampling: 128x128 → 256x256
     ),
     num_embeddings=256,
     embedding_dim=2,
     output_act="tanh",
-)#[B, 4, H/16, W/16]
+)
+
 # diffusion.py
 class ConditionalUNet(nn.Module):
     """基于第三方库的条件UNet适配器"""
