@@ -157,7 +157,8 @@ for epoch in range(num_epochs):
     epoch_psnr = []
     epoch_ssim = []
     with torch.no_grad():
-        for batch_idx, (images, _) in enumerate(test_loader):
+        for batch_idx, batch in enumerate(test_loader):
+            images, cond_images, labels = batch["image"], batch["cond_image"], batch["label"] 
             images = images.to(device)
 
             # 前向传播
