@@ -143,7 +143,7 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         train_loss += loss.item()
-        if (batch_idx + 1) % (len(train_loader) // 2 + 1) == 0:
+        if (batch_idx + 1) % (len(train_loader) // 4 + 1) == 0:
             print(f'Epoch {epoch + 1}, Batch {batch_idx + 1}, Loss: {loss.item() / len(images)}')
 
     # 每个epoch打印一次平均训练损失
