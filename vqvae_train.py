@@ -53,7 +53,7 @@ train_dataset = load_dataset(
     )
 test_dataset  = load_dataset(
     dataset_root=test_dataset_path, 
-    mask_dir=mask_path
+    mask_dir=mask_path,
     filter_option="diseased", 
     transform=test_transform
     )
