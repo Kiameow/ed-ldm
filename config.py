@@ -35,6 +35,7 @@ class TrainConfig:
     eval_save: str = "results"
     maskPath: str = "dataset/mask_test"
     textCoderPath : str = "text_embedder"
+    resume: bool = True
 
     #classifier free guidance
     cond_drop_prob_img: float = 0  # 图像条件丢弃概率

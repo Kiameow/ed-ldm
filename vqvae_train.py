@@ -1,5 +1,6 @@
 from random import sample
 import matplotlib.pyplot as plt
+import config
 from dataset import load_dataset
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ import metrics
 from torchvision.utils import save_image
 import os
 from kornia.losses import SSIMLoss
+from utils import get_latest_ckpt_path
 # 假设你的数据集存放在 'dataset_path' 路径下，每个类别在不同文件夹内
 train_dataset_path      = 'dataset/train'
 test_dataset_path       = 'dataset/test'
@@ -119,7 +121,12 @@ def draw_trainning_process(train_losses, test_losses, psnr_values, ssim_values):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = myVQVAE.to(device)
 
-model.to(device)
+if config.resume:
+    if not os.path.exists(savePath):
+        raise RuntimeError("cannot find the save path")
+    ckpt_path, epoch_runned = get_latest_ckpt_path(savePath)
+    if ckpt_path:
+        model.load_state_dict(torch.load(ckpt_path, map_location=device))
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate,weight_decay=1e-5)
 
 scheduler = ReduceLROnPlateau(
@@ -133,7 +140,7 @@ train_losses = []
 test_losses  = []  # 用于保存每个epoch的测试集损失
 psnr_values  = []
 ssim_values  = []
-for epoch in range(num_epochs):
+for epoch in range(epoch_runned, num_epochs):
     model.train()
     train_loss = 0
     for batch_idx, batch in enumerate(train_loader):
