@@ -24,6 +24,7 @@ batch_size              = 16
 savePath                = 'vae_models'
 milestones              = [30, 100]
 save_interval           = 20
+resume                  = True
 # 创建一个保存重建图像的文件夹
 reconstructed_images_path = os.path.join(savePath, 'reconstructed_images')
 if not os.path.exists(reconstructed_images_path):
@@ -121,12 +122,13 @@ def draw_trainning_process(train_losses, test_losses, psnr_values, ssim_values):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = myVQVAE.to(device)
 
-if config.resume:
+if resume:
     if not os.path.exists(savePath):
         raise RuntimeError("cannot find the save path")
     ckpt_path, epoch_runned = get_latest_ckpt_path(savePath)
     if ckpt_path:
         model.load_state_dict(torch.load(ckpt_path, map_location=device))
+        print(f"loaded ckpt epoch {epoch_runned}")
 optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate,weight_decay=1e-5)
 
 scheduler = ReduceLROnPlateau(
