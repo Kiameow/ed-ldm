@@ -130,7 +130,7 @@ if resume:
     if ckpt_path:
         model.load_state_dict(torch.load(ckpt_path, map_location=device))
         print(f"loaded ckpt epoch {epoch_runned}")
-optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate,weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate)
 
 scheduler = ReduceLROnPlateau(
     optimizer=optimizer,

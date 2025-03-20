@@ -26,8 +26,7 @@ myVQVAE = VQVAE(
         (2, 4, 1, 1, 0),  # Third upsampling: 128x128 → 256x256
     ),
     num_embeddings=16,
-    embedding_dim=1,
-    output_act="tanh",
+    embedding_dim=1
 )
 
 # diffusion.py
