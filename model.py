@@ -1,4 +1,5 @@
 
+import argparse
 import torch
 import torch.nn as nn
 from config import TrainConfig
@@ -7,6 +8,25 @@ import torch.nn.functional as F
 from modules.unet import UNetModel
 from modules.udit_models import U_DiT
 from generative.networks.nets import VQVAE
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train VQVAE with adjustable embeddings.")
+    parser.add_argument(
+        "--num_embeddings",
+        type=int,
+        default=4,
+        help="Number of embeddings (e.g., 1, 2, 4, 8, ...)."
+    )
+    parser.add_argument(
+        "--embedding_dim",
+        type=int,
+        default=1,
+        help="Embedding dimension."
+    )
+    # Add other training arguments here if needed
+    return parser.parse_args()
+
+args = parse_args()
 
 myVQVAE = VQVAE(
     spatial_dims=2,
@@ -25,8 +45,8 @@ myVQVAE = VQVAE(
         (2, 4, 1, 1, 0),  # Second upsampling: 64x64 → 128x128
         (2, 4, 1, 1, 0),  # Third upsampling: 128x128 → 256x256
     ),
-    num_embeddings=4,
-    embedding_dim=1
+    num_embeddings=args.num_embeddings,
+    embedding_dim=args.embedding_dim
 )
 
 # diffusion.py

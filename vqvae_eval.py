@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
 import metrics
-from model import myVQVAE
+from model import myVQVAE, args
 from dataset import load_dataset
 import torch.nn.functional as F
 
@@ -15,7 +15,8 @@ def main():
     test_dataset_path = 'dataset/test'
     test_mask_dir = 'dataset/mask_test'  # adjust as needed for your directory structure
     batch_size = 1  # process one sample at a time
-    checkpoint_path = 'vae_models/vae-final.pt'
+    save_dir = os.path.join("vae_models", f"vae-dim{args.embedding_dim}-num{args.num_embeddings}")
+    checkpoint_path = os.path.join(save_dir, "vae-final.pt")
     
     # Define test transform (same as in training, note the normalization)
     test_transform = transforms.Compose([
@@ -53,7 +54,7 @@ def main():
     ssim_values = []
     
     # Create a folder to store evaluation results
-    output_folder = "vae_eval_results"
+    output_folder = save_dir
     os.makedirs(output_folder, exist_ok=True)
     
     # Evaluation loop

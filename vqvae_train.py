@@ -8,7 +8,7 @@ from torch import nn, optim
 from torch.optim.lr_scheduler import MultiStepLR, ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-from model import myVQVAE
+from model import myVQVAE, args
 import metrics
 from torchvision.utils import save_image
 import os
@@ -21,11 +21,12 @@ mask_path               = 'dataset/mask_test'
 num_epochs              = 100
 initial_learning_rate   = 2e-4
 batch_size              = 16
-savePath                = 'vae_models'
+savePath                = os.path.join("vae_models", f"vae-dim{args.embedding_dim}-num{args.num_embeddings}")
 milestones              = [30, 100]
 save_interval           = 100
 resume                  = False
 # 创建一个保存重建图像的文件夹
+os.makedirs(savePath, exist_ok=True)
 reconstructed_images_path = os.path.join(savePath, 'reconstructed_images')
 if not os.path.exists(reconstructed_images_path):
     os.makedirs(reconstructed_images_path)
@@ -253,7 +254,7 @@ for epoch in range(epoch_runned if epoch_runned else 0, num_epochs):
         save_model_path = os.path.join(savePath, f"vae-{epoch}.pt")
         torch.save(model.state_dict(), save_model_path)
 # 保存模型
-save_model_path = os.path.join(savePath, f"vae-{epoch+1}.pt")
+save_model_path = os.path.join(savePath, f"vae-final.pt")
 torch.save(model.state_dict(), save_model_path)
 print(f'Model saved to {save_model_path}')
 
