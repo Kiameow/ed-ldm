@@ -25,7 +25,7 @@ myVQVAE = VQVAE(
         (2, 4, 1, 1, 0),  # Second upsampling: 64x64 → 128x128
         (2, 4, 1, 1, 0),  # Third upsampling: 128x128 → 256x256
     ),
-    num_embeddings=1,
+    num_embeddings=4,
     embedding_dim=1
 )
 
