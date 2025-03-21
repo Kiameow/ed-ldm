@@ -18,12 +18,12 @@ from utils import get_latest_ckpt_path
 train_dataset_path      = 'dataset/train'
 test_dataset_path       = 'dataset/test'
 mask_path               = 'dataset/mask_test'
-num_epochs              = 500
+num_epochs              = 100
 initial_learning_rate   = 2e-4
 batch_size              = 16
 savePath                = 'vae_models'
 milestones              = [30, 100]
-save_interval           = 20
+save_interval           = 100
 resume                  = False
 # 创建一个保存重建图像的文件夹
 reconstructed_images_path = os.path.join(savePath, 'reconstructed_images')
@@ -253,7 +253,7 @@ for epoch in range(epoch_runned if epoch_runned else 0, num_epochs):
         save_model_path = os.path.join(savePath, f"vae-{epoch}.pt")
         torch.save(model.state_dict(), save_model_path)
 # 保存模型
-save_model_path = os.path.join(savePath, f"vae-{epoch}.pt")
+save_model_path = os.path.join(savePath, f"vae-{epoch+1}.pt")
 torch.save(model.state_dict(), save_model_path)
 print(f'Model saved to {save_model_path}')
 
