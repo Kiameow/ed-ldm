@@ -120,7 +120,7 @@ def draw_trainning_process(train_losses, test_losses, psnr_values, ssim_values):
     plt.savefig(savePath + '/metrics_plot.png')
 
 # 初始化模型和优化器
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{args.cuda_num}" if torch.cuda.is_available() else "cpu")
 model = myVQVAE.to(device)
 
 epoch_runned = 0

@@ -36,7 +36,7 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
     # Set up device and load the model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.cuda_num}" if torch.cuda.is_available() else "cpu")
     model = myVQVAE.to(device)
     
     # Load the trained model checkpoint (update the path as needed)

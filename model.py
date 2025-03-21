@@ -23,6 +23,12 @@ def parse_args():
         default=1,
         help="Embedding dimension."
     )
+    parser.add_argument(
+        "--cuda_num",
+        type=int,
+        default=0,
+        help="cuda number."
+    )
     # Add other training arguments here if needed
     return parser.parse_args()
 
