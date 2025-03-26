@@ -186,6 +186,7 @@ for epoch in range(epoch_runned if epoch_runned else 0, num_epochs):
             # 前向传播
             recon_batch, quantized = model(images)
             latents = model.encode(images).to(torch.device('cpu'))
+            
 
             # 计算损失
             loss = vqvae_loss(recon_batch, images, quantized)
@@ -228,6 +229,7 @@ for epoch in range(epoch_runned if epoch_runned else 0, num_epochs):
             save_image(flair_recon, os.path.join(sample_dir, f"reconstruct.png"))
             if (batch_idx+1) % (len(test_loader) // 25 + 1) == 0:
                 save_image(stacked_images, os.path.join(reconstructed_images_path, f'reconstructed_{batch_idx+1}.png'))
+                print(latents.shape)
                 save_image(latents, os.path.join(reconstructed_images_path, f'latents_{batch_idx+1}.png'))
 
         test_loss /= len(test_loader.dataset)
